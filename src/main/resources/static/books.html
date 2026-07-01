@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Books - SmartLibrary</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+        .navbar {
+            background: #1a1a2e;
+            color: white;
+            padding: 16px 32px;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar a { color: #aaa; text-decoration: none; font-size: 14px; }
+        .container { max-width: 900px; margin: 32px auto; padding: 0 16px; }
+        h2 { margin-bottom: 20px; color: #1a1a2e; }
+        .form-box {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
+        }
+        .form-box h3 { margin-bottom: 16px; color: #333; }
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+        input {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover { background: #16213e; }
+        .btn-danger { background: #e74c3c; }
+        .btn-danger:hover { background: #c0392b; }
+        .btn-search { background: #2980b9; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        th {
+            background: #1a1a2e;
+            color: white;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 14px;
+        }
+        td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        tr:hover td { background: #f9f9f9; }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-green { background: #d4edda; color: #155724; }
+        .badge-red { background: #f8d7da; color: #721c24; }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    📚 SmartLibrary
+    <a href="index.html">← Back to Home</a>
+</div>
+
+<div class="container">
+    <h2>📖 Book Management</h2>
+
+    <!-- Add Book Form -->
+    <div class="form-box">
+        <h3>Add New Book</h3>
+        <div class="form-row">
+            <input type="text" id="title" placeholder="Title" />
+            <input type="text" id="author" placeholder="Author" />
+            <input type="text" id="genre" placeholder="Genre" />
+        </div>
+        <div class="form-row">
+            <input type="text" id="isbn" placeholder="ISBN" />
+            <input type="number" id="quantity" placeholder="Quantity" />
+            <button onclick="addBook()">+ Add Book</button>
+        </div>
+    </div>
+
+    <!-- Search -->
+    <div class="form-box">
+        <h3>Search Books</h3>
+        <div class="form-row">
+            <input type="text" id="searchInput" placeholder="Search by title, author or genre" />
+            <button class="btn-search" onclick="searchBooks()">Search</button>
+            <button onclick="loadBooks()">Show All</button>
+        </div>
+    </div>
+
+    <!-- Books Table -->
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Title</th>
+                <th>Author</th>
+                <th>Genre</th>
+                <th>ISBN</th>
+                <th>Qty</th>
+                <th>Available</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="booksTable"></tbody>
+    </table>
+</div>
+
+<script>
+    const API = "http://localhost:8080/api/books";
+
+    async function loadBooks() {
+        const res = await fetch(API);
+        const books = await res.json();
+        renderTable(books);
+    }
+
+    function renderTable(books) {
+        const tbody = document.getElementById("booksTable");
+        tbody.innerHTML = "";
+        if (books.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#999">No books found</td></tr>`;
+            return;
+        }
+        books.forEach(b => {
+            tbody.innerHTML += `
+                <tr>
+                    <td>${b.id}</td>
+                    <td>${b.title}</td>
+                    <td>${b.author}</td>
+                    <td>${b.genre || '-'}</td>
+                    <td>${b.isbn || '-'}</td>
+                    <td>${b.quantity}</td>
+                    <td><span class="badge ${b.availableQty > 0 ? 'badge-green' : 'badge-red'}">${b.availableQty}</span></td>
+                    <td><button class="btn-danger" onclick="deleteBook(${b.id})">Delete</button></td>
+                </tr>`;
+        });
+    }
+
+    async function addBook() {
+        const book = {
+            title: document.getElementById("title").value,
+            author: document.getElementById("author").value,
+            genre: document.getElementById("genre").value,
+            isbn: document.getElementById("isbn").value,
+            quantity: parseInt(document.getElementById("quantity").value)
+        };
+        if (!book.title || !book.author || !book.quantity) {
+            alert("Title, Author and Quantity are required!");
+            return;
+        }
+        await fetch(API, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(book)
+        });
+        document.getElementById("title").value = "";
+        document.getElementById("author").value = "";
+        document.getElementById("genre").value = "";
+        document.getElementById("isbn").value = "";
+        document.getElementById("quantity").value = "";
+        loadBooks();
+    }
+
+    async function deleteBook(id) {
+        if (!confirm("Delete this book?")) return;
+        await fetch(`${API}/${id}`, { method: "DELETE" });
+        loadBooks();
+    }
+
+    async function searchBooks() {
+        const query = document.getElementById("searchInput").value;
+        if (!query) { loadBooks(); return; }
+        const res = await fetch(`${API}/search?title=${query}`);
+        const books = await res.json();
+        renderTable(books);
+    }
+
+    loadBooks();
+</script>
+</body>
+</html>

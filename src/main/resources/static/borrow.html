@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Borrow & Return - SmartLibrary</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; }
+        .navbar {
+            background: #1a1a2e;
+            color: white;
+            padding: 16px 32px;
+            font-size: 20px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar a { color: #aaa; text-decoration: none; font-size: 14px; }
+        .container { max-width: 900px; margin: 32px auto; padding: 0 16px; }
+        h2 { margin-bottom: 20px; color: #1a1a2e; }
+        .form-box {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            margin-bottom: 24px;
+        }
+        .form-box h3 { margin-bottom: 16px; color: #333; }
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        input {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px 14px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 20px;
+            background: #1a1a2e;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover { background: #16213e; }
+        .btn-return { background: #27ae60; }
+        .btn-return:hover { background: #1e8449; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        th {
+            background: #1a1a2e;
+            color: white;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 14px;
+        }
+        td { padding: 12px 16px; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+        tr:hover td { background: #f9f9f9; }
+        .badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .badge-green { background: #d4edda; color: #155724; }
+        .badge-orange { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+
+<div class="navbar">
+    📚 SmartLibrary
+    <a href="index.html">← Back to Home</a>
+</div>
+
+<div class="container">
+    <h2>🔄 Borrow & Return</h2>
+
+    <!-- Issue Book -->
+    <div class="form-box">
+        <h3>Issue a Book</h3>
+        <div class="form-row">
+            <input type="number" id="bookId" placeholder="Book ID" />
+            <input type="number" id="memberId" placeholder="Member ID" />
+            <button onclick="borrowBook()">Issue Book</button>
+        </div>
+    </div>
+
+    <!-- Return Book -->
+    <div class="form-box">
+        <h3>Return a Book</h3>
+        <div class="form-row">
+            <input type="number" id="recordId" placeholder="Borrow Record ID" />
+            <button class="btn-return" onclick="returnBook()">Return Book</button>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div style="margin-bottom:16px; display:flex; gap:12px;">
+        <button onclick="loadActive()">Active Borrows</button>
+        <button onclick="loadAll()">All Records</button>
+    </div>
+
+    <!-- Table -->
+    <table>
+        <thead>
+            <tr>
+                <th>Record ID</th>
+                <th>Book</th>
+                <th>Member</th>
+                <th>Borrow Date</th>
+                <th>Due Date</th>
+                <th>Return Date</th>
+                <th>Fine (₹)</th>
+                <th>Status</th>
+            </tr>
+        </thead>
+        <tbody id="borrowTable"></tbody>
+    </table>
+</div>
+
+<script>
+    const BASE = "http://localhost:8080/api/borrow";
+
+    async function loadActive() {
+        const res = await fetch(`${BASE}/active`);
+        const records = await res.json();
+        renderTable(records);
+    }
+
+    async function loadAll() {
+        const res = await fetch(BASE);
+        const records = await res.json();
+        renderTable(records);
+    }
+
+    function renderTable(records) {
+        const tbody = document.getElementById("borrowTable");
+        tbody.innerHTML = "";
+        if (records.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:#999">No records found</td></tr>`;
+            return;
+        }
+        records.forEach(r => {
+            const returned = r.returnDate != null;
+            tbody.innerHTML += `
+                <tr>
+                    <td>${r.id}</td>
+                    <td>${r.book.title}</td>
+                    <td>${r.member.name}</td>
+                    <td>${r.borrowDate}</td>
+                    <td>${r.dueDate}</td>
+                    <td>${r.returnDate || '-'}</td>
+                    <td>${r.fine > 0 ? '₹' + r.fine : '-'}</td>
+                    <td><span class="badge ${returned ? 'badge-green' : 'badge-orange'}">${returned ? 'Returned' : 'Active'}</span></td>
+                </tr>`;
+        });
+    }
+
+    async function borrowBook() {
+        const bookId = document.getElementById("bookId").value;
+        const memberId = document.getElementById("memberId").value;
+        if (!bookId || !memberId) { alert("Enter Book ID and Member ID!"); return; }
+        try {
+            const res = await fetch(`${BASE}/issue?bookId=${bookId}&memberId=${memberId}`, { method: "POST" });
+            if (!res.ok) {
+                const err = await res.text();
+                alert("Error: " + err);
+                return;
+            }
+            alert("Book issued successfully!");
+            document.getElementById("bookId").value = "";
+            document.getElementById("memberId").value = "";
+            loadActive();
+        } catch(e) {
+            alert("Failed to issue book!");
+        }
+    }
+
+    async function returnBook() {
+        const recordId = document.getElementById("recordId").value;
+        if (!recordId) { alert("Enter Record ID!"); return; }
+        const res = await fetch(`${BASE}/return/${recordId}`, { method: "PUT" });
+        const record = await res.json();
+        if (record.fine > 0) {
+            alert(`Book returned! Fine: ₹${record.fine}`);
+        } else {
+            alert("Book returned successfully! No fine.");
+        }
+        document.getElementById("recordId").value = "";
+        loadAll();
+    }
+
+    loadActive();
+</script>
+</body>
+</html>
