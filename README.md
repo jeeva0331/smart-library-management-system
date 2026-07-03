@@ -20,3 +20,14 @@ A full-stack library management system with role-based authentication, letting a
 - **REST API** — backend exposes REST endpoints consumed by the frontend
 
 ## Project Structure
+
+    src/main/java/com/smartLibrary
+     ├── controller/     REST controllers (Book, Member, Borrow, Auth, Dashboard)
+     ├── service/        Business logic layer
+     ├── repository/     Spring Data JPA repositories
+     ├── model/          Entity classes (Book, Member, BorrowRecord, User)
+     └── security/       Spring Security config & custom UserDetailsService
+
+    src/main/resources
+     ├── static/         Frontend pages (index, login, signup, dashboard, books, members, borrow)
+     └── application.properties
